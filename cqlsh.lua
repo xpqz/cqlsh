@@ -1,5 +1,5 @@
-local Cloudant = require 'source'
-local SQLite3 = require 'sink'
+local Cloudant = require 'sources.cloudant'
+local SQLite3 = require 'sinks.sqlite'
 local Pipe = require 'pipeline'
 
 local argparse = require 'argparse'
@@ -59,7 +59,7 @@ local pipeline = Pipe:new {
   sink = SQLite3:new {
     database = args.database,
     indexes = args.index,
-    chunk = args.chunk
+    chunk = tonumber(args.chunk)
   },
   filters = {
     function (row) -- skip design documents

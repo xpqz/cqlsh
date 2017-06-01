@@ -40,7 +40,6 @@ function Source:emit_next()
   local index = 1
 
   while true do
-    
     local line = stream:get_body_until('\n', true, false)
     if not line then break end
     if line ~= '' then
