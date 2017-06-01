@@ -1,3 +1,4 @@
+--- A Sink for SQLite3
 local sqlite3 = require 'lsqlite3'
 local json = require 'cjson'
 
@@ -38,11 +39,10 @@ function Sink:new(tbl)
   assert(tbl.indexes)
   assert(tbl.chunk and tbl.chunk >= 1)
   tbl.db = assert(create_db(sqlite3.open(tbl.database .. '.db'), tbl.indexes))
-  tbl.chunk = {}
-  tbl.docs = {}
+  tbl.rows = {}
 
   tbl.insert_document = assert(tbl.db:prepare('INSERT INTO documents (_id, _rev, body) VALUES (?, ?, json(?))'))
-  -- tbl.insert_seq = assert(tbl.db:prepare('INSERT INTO local (last_seq) VALUES (?)'))
+  tbl.insert_seq = assert(tbl.db:prepare('INSERT INTO local (last_seq) VALUES (?)'))
 
   return tbl
 end
@@ -66,30 +66,27 @@ local function execute(arg)
 end
 
 function Sink:commit_chunk()
-  self.db:exec 'BEGIN TRANSACTION'
-  for _, doc in ipairs(self.docs) do
-    local _id = doc._id
-    local _rev = doc._rev
-    doc._id = nil
-    doc._rev = nil
-    execute{statement=self.insert_document, data={_id, _rev, json.encode(doc)}}
+  if #self.rows > 0 then
+    self.db:exec 'BEGIN TRANSACTION'
+    for _, row in ipairs(self.rows) do
+      local doc = row.doc
+      execute{statement=self.insert_document, data={doc._id, doc._rev, json.encode(doc)}}
+    end
+    execute{statement=self.insert_seq, data={self.rows[#self.rows].seq}}
+    self.db:exec 'COMMIT'
+    self.rows = {}
   end
-  self.db:exec 'COMMIT'
 end
 
 function Sink:absorb(row)
-  if #self.docs == self.chunk then
+  if #self.rows == self.chunk then
     self:commit_chunk()
-    self.docs = {}
   end
-  self.docs[#self.docs+1] = row
+  self.rows[#self.rows+1] = row
 end
 
 function Sink:drain()
-  if #self.docs > 0 then
-    self:commit_chunk()
-    self.docs = {}
-  end
+  self:commit_chunk()
 end
 
 return Sink

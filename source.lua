@@ -1,3 +1,4 @@
+--- A Source for Cloudant
 local json = require 'cjson'
 local request = require 'http.request'
 
@@ -5,7 +6,7 @@ local Source = {
   database = nil, 
   username = nil,
   password = nil,
-  url = nil,
+  url = nil
 }
 
 --- A Source for Cloudant
@@ -39,6 +40,7 @@ function Source:emit_next()
   local index = 1
 
   while true do
+    
     local line = stream:get_body_until('\n', true, false)
     if not line then break end
     if line ~= '' then
@@ -47,7 +49,7 @@ function Source:emit_next()
         coroutine.yield(index, {last_seq=row.last_seq})
         break 
       end
-      coroutine.yield(index, row.doc)
+      coroutine.yield(index, row)
       index = index + 1
     end
   end

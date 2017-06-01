@@ -6,13 +6,6 @@ local argparse = require 'argparse'
 local os = require 'os'
 local json = require 'cjson'
 
-local function filter(doc)
-  if string.sub(doc._id, 1, string.len('_design')) == '_design' then
-    return nil
-  end
-  return doc
-end
-
 local parser = argparse('cqlsh', 'Load a CouchDB database into sqlite3')
 parser:option('-u --url', 'Base couchdb URL', '')
 parser:option('-d --database', 'database', '')
@@ -69,12 +62,12 @@ local pipeline = Pipe:new {
     chunk = args.chunk
   },
   filters = {
-    function (doc)
-      if doc == nil or doc == {} or not doc._id then return nil end
-      if string.sub(doc._id, 1, string.len('_design')) == '_design' then
+    function (row) -- skip design documents
+      if row == nil or row == {} or not row.doc then return nil end
+      if string.sub(row.doc._id, 1, string.len('_design')) == '_design' then
         return nil
       end
-      return doc
+      return row
     end
   }
 }
