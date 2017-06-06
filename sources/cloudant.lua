@@ -6,6 +6,7 @@ local Source = {
   database = nil, 
   username = nil,
   password = nil,
+  interval = 1000,
   url = nil
 }
 
@@ -34,7 +35,7 @@ function Source:new(tbl)
 end
 
 function Source:emit_next()
-  local req = request.new_from_uri(string.format('%s%s/_changes?feed=continuous&style=main_only&include_docs=true&timeout=0', self.url, self.database))
+  local req = request.new_from_uri(string.format('%s%s/_changes?feed=continuous&style=main_only&include_docs=true&seq_inderval=%d&timeout=0', self.url, self.database, self.interval))
   local headers, stream = req:go()
 
   local index = 1
@@ -44,11 +45,8 @@ function Source:emit_next()
     if not line then break end
     if line ~= '' then
       local row = json.decode(line) 
-      if row.last_seq then 
-        coroutine.yield(index, {last_seq=row.last_seq})
-        break 
-      end
       coroutine.yield(index, row)
+      if row.last_seq then break end
       index = index + 1
     end
   end

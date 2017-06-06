@@ -2,6 +2,8 @@
 local sqlite3 = require 'lsqlite3'
 local json = require 'cjson'
 
+local unpack = unpack or table.unpack -- 5.1 compat
+
 local Sink = { database = nil, indexes = {}, chunk=1000 }
 
 local function create_db(database, indexes)

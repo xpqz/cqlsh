@@ -8,9 +8,14 @@ function Sink:new(tbl)
   setmetatable(tbl, self)
   self.__index = self
   assert(tbl.filename)
-  local file, err = io.open(tbl.filename, "wb")
-  if err then return err end
-  tbl.fp = file
+
+  if tbl.filename == '-' then
+    tbl.fp = io.stdout
+  else 
+    local file, err = io.open(tbl.filename, "wb")
+    if err then return err end
+    tbl.fp = file
+  end
   
   tbl.docs = {}
 
@@ -19,7 +24,7 @@ end
 
 function Sink:commit_chunk()
   if #self.docs > 0 then 
-    self.fp:write(json.encode(self.docs))
+    self.fp:write(json.encode(self.docs), "\n")
     self.docs = {}
   end
 end

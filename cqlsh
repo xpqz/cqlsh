@@ -1,14 +1,17 @@
-local Cloudant = require 'sources.cloudant'
-local SQLite3 = require 'sinks.sqlite'
-local Pipe = require 'pipeline'
+#!/usr/bin/env lua
 
+local Cloudant = require 'sources.cloudant'
+local Pipe = require 'pipeline'
+local SQLite3 = require 'sinks.sqlite'
+local File = require 'sinks.file'
 local argparse = require 'argparse'
 local os = require 'os'
 local json = require 'cjson'
 
-local parser = argparse('cqlsh', 'Load a CouchDB database into sqlite3')
+local parser = argparse('cqlsh', 'Load a CouchDB database into sqlite3/file/..')
 parser:option('-u --url', 'Base couchdb URL', '')
 parser:option('-d --database', 'database', '')
+parser:option('-f --file', 'filename', '')
 parser:option('--user', 'username', '')
 parser:option('--password', 'password', '')
 parser:option('-c --chunk', 'commit size', 1000)
@@ -49,6 +52,17 @@ if args.password == '' then
   end
 end
 
+local sink
+if args.file == '' then
+  sink = SQLite3:new {
+    database = args.database,
+    indexes = args.index,
+    chunk = tonumber(args.chunk)
+  }
+else
+ sink = File:new { filename = args.file, chunk = tonumber(args.chunk) }
+end
+
 local pipeline = Pipe:new {
   source = Cloudant:new {
     url = args.url,
@@ -56,19 +70,15 @@ local pipeline = Pipe:new {
     password = args.password,
     database = args.database
   },
-  sink = SQLite3:new {
-    database = args.database,
-    indexes = args.index,
-    chunk = tonumber(args.chunk)
-  },
+  sink = sink,
   filters = {
-    function (row) -- skip design documents
-      if row == nil or row == {} or not row.doc then return nil end
-      if string.sub(row.doc._id, 1, string.len('_design')) == '_design' then
-        return nil
-      end
-      return row
-    end
+    -- function (row) -- skip design documents
+    --   if row == nil or row == {} or not row.doc then return nil end
+    --   if string.sub(row.doc._id, 1, string.len('_design')) == '_design' then
+    --     return nil
+    --   end
+    --   return row
+    -- end
   }
 }
 
