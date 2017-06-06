@@ -3,73 +3,105 @@
 local Cloudant = require 'sources.cloudant'
 local Pipe = require 'pipeline'
 local SQLite3 = require 'sinks.sqlite'
-local File = require 'sinks.file'
+local file_sink = require 'sinks.file'
+local file_source = require 'sources.file'
 local argparse = require 'argparse'
 local os = require 'os'
 local json = require 'cjson'
 
+local function startswith(str, substr)
+  return string.sub(str, 1, string.len(substr)) == substr
+end
+
+function endswith(str, substr)
+  return substr == '' or string.sub(str, -string.len(substr)) == substr
+end
+
+local function url_join(uri, path)
+  if path == '' then return uri end
+
+  if endswith(uri, '/') then
+    uri = string.sub(uri, 2)
+  end
+
+  if startswith(path, '/') then
+    return uri .. path
+  end
+
+  return uri .. '/' .. path
+end
+ 
 local parser = argparse('cqlsh', 'Load a CouchDB database into sqlite3/file/..')
-parser:option('-u --url', 'Base couchdb URL', '')
-parser:option('-d --database', 'database', '')
-parser:option('-f --file', 'filename', '')
+parser:option('--source', 'Data source - local file or Cloudant URL', '')
+parser:option('--sink', 'filename.json or filename.db', '-')
 parser:option('--user', 'username', '')
 parser:option('--password', 'password', '')
+parser:option('--verbose', 'debug output', false)
 parser:option('-c --chunk', 'commit size', 1000)
 parser:option("-i --index", 'index json fields', {}):count '*'
 
 local args = parser:parse()
 
-if args.url == '' then
+--- Figure out what we're reading from. The options are:
+--  1. No source given. Check if we have some environment variables set
+--  2. Source looks like a URL
+--  3. Source looks like a local file
+local source
+if args.source == '' then
   if os.getenv('COUCH_URL') then 
-    args.url = os.getenv('COUCH_URL') 
+    args.source = os.getenv('COUCH_URL') 
+    if os.getenv('COUCH_DATABASE') then 
+      args.source = url_join(args.source, os.getenv('COUCH_DATABASE'))
+    end
   else
-    print('No URL given!!')
+    print('No source given!!')
     os.exit(1)
   end
 end
 
-if args.database == '' then
-  if os.getenv('COUCH_DATABASE') then 
-    args.database = os.getenv('COUCH_DATABASE')
-  else
-    print('No database given!')  
-    os.exit(2)
+--- Is this a remote source?
+if startswith(args.source, 'https://') then
+  -- Optional username and password. If not given, check the COUCH_USER and COUCH_PASSWORD 
+  -- environment variables. If not given, proceed anyway as source URL can have the access
+  -- creds inline, or the resource may be open for unauthenticated reading.
+  if args.user == '' then
+    if os.getenv('COUCH_USER') then 
+      args.user = os.getenv('COUCH_USER')
+    end
   end
-end
 
--- Optional username and password. If not given, check the COUCH_USER and COUCH_PASSWORD 
--- environment variables. If not given, proceed anyway as source URL can have the access
--- creds inline, or the resource may be open for unauthenticated reading.
-if args.user == '' then
-  if os.getenv('COUCH_USER') then 
-    args.user = os.getenv('COUCH_USER')
+  if args.password == '' then
+    if os.getenv('COUCH_PASSWORD') then 
+      args.user = os.getenv('COUCH_PASSWORD')
+    end
   end
-end
 
-if args.password == '' then
-  if os.getenv('COUCH_PASSWORD') then 
-    args.user = os.getenv('COUCH_PASSWORD')
-  end
+  io.stderr:write(string.format("[source] remote Cloudant: %s\n", args.source))
+  source = Cloudant:new {
+    url = args.source,
+    username = args.user,
+    password = args.password
+  }
+else
+  io.stderr:write(string.format("[source] local file: %s\n", args.source))
+  source = file_source:new{filename = args.source}
 end
 
 local sink
-if args.file == '' then
+if endswith(args.sink, '.db') then
   sink = SQLite3:new {
     database = args.database,
     indexes = args.index,
     chunk = tonumber(args.chunk)
   }
+  io.stderr:write(string.format("[sink] SQLite3 database: %s\n", args.sink))
 else
- sink = File:new { filename = args.file, chunk = tonumber(args.chunk) }
+  io.stderr:write(string.format("[sink] local file: %s\n", args.sink))
+  sink = file_sink:new { filename = args.sink, chunk = tonumber(args.chunk) }
 end
 
 local pipeline = Pipe:new {
-  source = Cloudant:new {
-    url = args.url,
-    username = args.username,
-    password = args.password,
-    database = args.database
-  },
+  source = source,
   sink = sink,
   filters = {
     -- function (row) -- skip design documents

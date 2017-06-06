@@ -3,9 +3,8 @@ local json = require 'cjson'
 local request = require 'http.request'
 
 local Source = { 
-  database = nil, 
-  username = nil,
-  password = nil,
+  username = '',
+  password = '',
   interval = 1000,
   url = nil
 }
@@ -18,12 +17,11 @@ function Source:new(tbl)
   tbl = tbl or {}
   setmetatable(tbl, self)
   self.__index = self
-  assert(tbl.database)
   assert(tbl.url)
 
   -- TODO: figure out how sessions work
   local match = string.match(tbl.url, '(https://)([^:@]+)')
-  if match and tbl.username and tbl.password then
+  if match and tbl.username ~= '' and tbl.password ~= '' then
     tbl.url = match[1] .. tbl.username .. ':' .. tbl.password .. '@' .. match[2]
   end
 
@@ -35,7 +33,7 @@ function Source:new(tbl)
 end
 
 function Source:emit_next()
-  local req = request.new_from_uri(string.format('%s%s/_changes?feed=continuous&style=main_only&include_docs=true&seq_inderval=%d&timeout=0', self.url, self.database, self.interval))
+  local req = request.new_from_uri(string.format('%s/_changes?feed=continuous&style=main_only&include_docs=true&seq_inderval=%d&timeout=0', self.url, self.interval))
   local headers, stream = req:go()
 
   local index = 1
