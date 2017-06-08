@@ -1,7 +1,8 @@
 local Pipe = { 
   source = nil, 
   sink = nil,
-  filters = {}
+  filters = {},
+  emits = 0
 }
 
 function Pipe:new(tbl) 
@@ -15,12 +16,15 @@ end
 
 function Pipe:process()
   for _, row in self.source:emit() do
-    local filtered = row
-    for _, filter in ipairs(self.filters) do
-      filtered = filter(filtered)
-    end
-    if filtered ~= nil then
-      self.sink:absorb(filtered)
+    if row ~= nil then
+      self.emits = self.emits + 1
+      local filtered = row
+      for _, filter in ipairs(self.filters) do
+        filtered = filter(filtered)
+      end
+      if filtered ~= nil then
+        self.sink:absorb(filtered)
+      end
     end
   end
 

@@ -39,6 +39,7 @@ parser:option('--password', 'password', '')
 parser:option('--verbose', 'debug output', false)
 parser:option('-c --chunk', 'commit size', 1000)
 parser:option("-i --index", 'index json fields', {}):count '*'
+parser:flag('-v --verbose')
 
 local args = parser:parse()
 
@@ -54,7 +55,7 @@ if args.source == '' then
       args.source = url_join(args.source, os.getenv('COUCH_DATABASE'))
     end
   else
-    print('No source given!!')
+    io.stderr:write('No source given!!')
     os.exit(1)
   end
 end
@@ -76,27 +77,27 @@ if startswith(args.source, 'https://') then
     end
   end
 
-  io.stderr:write(string.format("[source] remote Cloudant: %s\n", args.source))
+  if args.verbose then io.stderr:write(string.format("[source] remote Cloudant: %s\n", args.source)) end
   source = Cloudant:new {
     url = args.source,
     username = args.user,
     password = args.password
   }
 else
-  io.stderr:write(string.format("[source] local file: %s\n", args.source))
+  if args.verbose then io.stderr:write(string.format("[source] local file: %s\n", args.source)) end
   source = file_source:new{filename = args.source}
 end
 
 local sink
 if endswith(args.sink, '.db') then
   sink = SQLite3:new {
-    database = args.database,
+    database = args.sink,
     indexes = args.index,
     chunk = tonumber(args.chunk)
   }
-  io.stderr:write(string.format("[sink] SQLite3 database: %s\n", args.sink))
+  if args.verbose then io.stderr:write(string.format("[sink]   SQLite3 database: %s\n", args.sink)) end
 else
-  io.stderr:write(string.format("[sink] local file: %s\n", args.sink))
+  if args.verbose then io.stderr:write(string.format("[sink]   local file: %s\n", args.sink)) end
   sink = file_sink:new { filename = args.sink, chunk = tonumber(args.chunk) }
 end
 
@@ -115,5 +116,9 @@ local pipeline = Pipe:new {
 }
 
 pipeline:process()
+
+if args.verbose then
+  io.stderr:write(string.format("[source] emitted %d records\n", pipeline.emits))
+end
 
 

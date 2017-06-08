@@ -30,7 +30,7 @@ local function create_db(database, indexes)
 end
 
 --- A Sink for SQLite3
--- @param database The name of the database, without any suffix.
+-- @param database The name of the database file
 -- @usage local sqlite = Sink:new{database="routes", indexes={'crag', 'name'}, chunk=500}
 -- @return table
 function Sink:new(tbl) 
@@ -40,7 +40,7 @@ function Sink:new(tbl)
   assert(tbl.database)
   assert(tbl.indexes)
   assert(tbl.chunk and tbl.chunk >= 1)
-  tbl.db = assert(create_db(sqlite3.open(tbl.database .. '.db'), tbl.indexes))
+  tbl.db = assert(create_db(sqlite3.open(tbl.database), tbl.indexes))
   tbl.rows = {}
 
   tbl.insert_document = assert(tbl.db:prepare('INSERT INTO documents (_id, _rev, body) VALUES (?, ?, json(?))'))
@@ -81,6 +81,7 @@ function Sink:commit_chunk()
 end
 
 function Sink:absorb(row)
+  if row == nil or not row.doc then return nil end
   if #self.rows == self.chunk then
     self:commit_chunk()
   end
