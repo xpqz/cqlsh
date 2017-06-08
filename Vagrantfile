@@ -11,11 +11,9 @@ sudo apt-get install -yq luajit luarocks lua5.1
 # Lua
 sudo luarocks install lua-cjson
 sudo luarocks install luasec
+sudo luarocks install lua-http
 sudo luarocks install lsqlite3
-sudo luarocks install MessagePack
-sudo luarocks install lua-requests
 sudo luarocks install argparse
-sudo luarocks install busted
 SCRIPT
 
 Vagrant.configure("2") do |config|
