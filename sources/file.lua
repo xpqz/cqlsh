@@ -42,8 +42,7 @@ function Source:emit_next()
   local index = 1
   for line in io.lines(self.filename) do
     for _, doc in ipairs(json.decode(line)) do
-      -- print(json.encode(doc))
-      coroutine.yield(index, {doc=doc})
+      coroutine.yield(index, doc)
       index = index + 1
     end
   end

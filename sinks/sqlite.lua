@@ -90,7 +90,9 @@ function Sink:commit_chunk()
       local doc = row.doc
       execute{statement=self.insert_document, data={doc._id, doc._rev, json.encode(doc)}}
     end
-    execute{statement=self.insert_seq, data={self.rows[#self.rows].seq}}
+    if self.rows[#self.rows].seq then
+      execute{statement=self.insert_seq, data={self.rows[#self.rows].seq}}
+    end
     self.db:exec 'COMMIT'
     self.rows = {}
   end

@@ -33,23 +33,24 @@ function Sink:new(tbl)
     tbl.fp = file
   end
   
-  tbl.docs = {}
+  tbl.rows = {}
 
   return tbl
 end
 
 function Sink:commit_chunk()
-  if #self.docs > 0 then 
-    self.fp:write(json.encode(self.docs), "\n")
-    self.docs = {}
+  if #self.rows > 0 then 
+    self.fp:write(json.encode(self.rows), "\n")
+    self.rows = {}
   end
 end
 
 function Sink:absorb(row)
-  if #self.docs == self.chunk then 
+  if row == nil or not row.doc then return nil end
+  if #self.rows == self.chunk then 
    self:commit_chunk()
   end
-  self.docs[#self.docs+1] = row.doc
+  self.rows[#self.rows+1] = {seq=row.seq, doc=row.doc}
 end
 
 function Sink:drain()
