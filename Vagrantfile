@@ -14,6 +14,7 @@ sudo luarocks install luasec
 sudo luarocks install lua-http
 sudo luarocks install lsqlite3
 sudo luarocks install argparse
+sudo luarocks install luaposix
 SCRIPT
 
 Vagrant.configure("2") do |config|
