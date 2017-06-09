@@ -131,7 +131,7 @@ sqlite>
 ```
 
 The json1 extension is fast and light-weight. For further information, consult the documentation
-on the sqlite3 (site)[https://sqlite.org/json1.html].
+on the sqlite3 [site](https://sqlite.org/json1.html).
 
 ## Performance
 
