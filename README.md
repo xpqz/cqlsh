@@ -91,9 +91,9 @@ In SQLite3, you can index on arbitrary expressions, including those provided by 
 extension. If you specify fields to be indexed, the indexes will be generated using the 
 statement:
 
-    ```sql
-    CREATE INDEX '{fieldname}' ON documents(json_extract(body, '$.{fieldname}'));
-    ```
+```sql
+CREATE INDEX '{fieldname}' ON documents(json_extract(body, '$.{fieldname}'));
+```
 
 where `fieldname` is the field in the json body for which the index was requested. The `$`
 anchors the expression to the top-level of the json-object. In order to access a nested
@@ -101,13 +101,13 @@ field, e.g. the country in the following doc:
 
 ```json
 {
-    '_id': '7a36cbc16e43e362e1ae68861abfb1ec',
-    '_rev': '1-7d0f95d893ba26ae0d7949707022b03f',
-    'address': {
-        'street': '1366 Main St',
-        'city': 'Boston',
-        'zip': '02134',
-        'country': 'USA'
+    "_id": "7a36cbc16e43e362e1ae68861abfb1ec",
+    "_rev": "1-7d0f95d893ba26ae0d7949707022b03f",
+    "address": {
+        "street": "1366 Main St",
+        "city": "Boston",
+        "zip": "02134",
+        "country": "USA"
     }
 }
 ```
