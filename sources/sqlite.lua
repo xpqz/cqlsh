@@ -14,47 +14,42 @@
    limitations under the License.
 --]]------------------------------------------------------------------------
 
---- A Sink for a file on disk
+--- A Source for SQLite3
+local sqlite3 = require 'lsqlite3'
 local json = require 'cjson'
+local posix = require 'posix'
 
-local Sink = { filename = nil, chunk=500 }
+local unpack = unpack or table.unpack -- 5.1 compat
 
-function Sink:new(tbl) 
+local Source = { database = nil }
+
+--- A Source for SQLite3
+-- @param database The name of the database file
+-- @usage local sqlite = Source:new{database='routes.db'}
+-- @return table
+function Source:new(tbl) 
   tbl = tbl or {}
   setmetatable(tbl, self)
   self.__index = self
-  assert(tbl.filename)
-
-  if tbl.filename == '-' then
-    tbl.fp = io.stdout
-  else 
-    local file, err = io.open(tbl.filename, "wb")
-    if err then return err end
-    tbl.fp = file
-  end
-  
+  assert(tbl.database)
+  assert(posix.stat(tbl.database)) -- file must exist
+  tbl.db = assert(sqlite3.open(tbl.database))
   tbl.rows = {}
 
   return tbl
 end
 
-function Sink:commit_chunk()
-  if #self.rows > 0 then 
-    self.fp:write(json.encode(self.rows), "\n")
-    self.rows = {}
+function Source:emit_next()
+  local index = 1
+  for row in self.db:nrows('SELECT * FROM documents') do
+    coroutine.yield(index, {seq=nil, doc=json.decode(row.body)})
+    index = index + 1
   end
 end
 
-function Sink:absorb(row)
-  if row == nil or not row.doc then return nil end
-  if #self.rows == self.chunk then 
-   self:commit_chunk()
-  end
-  self.rows[#self.rows+1] = {seq=row.seq, doc=row.doc}
+--- Co-routine for listing all documents
+function Source:emit()
+  return coroutine.wrap(function() self:emit_next() end)
 end
 
-function Sink:drain()
-  self:commit_chunk()
-end
-
-return Sink
+return Source

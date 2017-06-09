@@ -20,6 +20,7 @@ local Pipe = require 'pipeline'
 local SQLite3 = require 'sinks.sqlite'
 local file_sink = require 'sinks.file'
 local file_source = require 'sources.file'
+local sqlite_source = require 'sources.sqlite'
 local argparse = require 'argparse'
 local os = require 'os'
 local json = require 'cjson'
@@ -61,7 +62,8 @@ local args = parser:parse()
 --- Figure out what we're reading from. The options are:
 --  1. No source given. Check if we have some environment variables set
 --  2. Source looks like a URL
---  3. Source looks like a local file
+--  3. Source looks like a sqlite3 db
+--  4. Source looks like a local file
 local source
 if args.source == '' then
   if os.getenv('COUCH_URL') then 
@@ -98,6 +100,9 @@ if startswith(args.source, 'https://') then
     username = args.user,
     password = args.password
   }
+elseif endswith(args.source, '.db') then 
+  if args.verbose then io.stderr:write(string.format("[source] SQLite3 database: %s\n", args.source)) end
+  source = sqlite_source:new{database = args.source}
 else
   if args.verbose then io.stderr:write(string.format("[source] local file: %s\n", args.source)) end
   source = file_source:new{filename = args.source}
