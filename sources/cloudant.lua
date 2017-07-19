@@ -49,7 +49,7 @@ function Source:new(tbl)
 end
 
 function Source:emit_next()
-  local req = request.new_from_uri(string.format('%s/_changes?feed=continuous&style=main_only&include_docs=true&seq_inderval=%d&timeout=0', self.url, self.interval))
+  local req = request.new_from_uri(string.format('%s/_changes?feed=continuous&style=main_only&include_docs=true&seq_interval=%d&timeout=0', self.url, self.interval))
   local headers, stream = req:go()
 
   local index = 1
